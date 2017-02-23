@@ -10,6 +10,9 @@
 @black: #212121;
 @white: #fafafa;
 
+body {
+  overflow: hidden;
+}
 main {
   background: @canvas;
   width: 800px;
@@ -23,14 +26,23 @@ canvas {
   max-height: 100%;
   max-width: 100%;
 }
-
-panel.fixed {
+.fixed {
   position: fixed;
 }
 
 #palette {
   right: 0;
   top: 0;
+}
+
+#clear-button {
+  bottom: 0;
+  left: 0;
+}
+
+#share-button {
+  right: 0;
+  bottom: 0;
 }
 
 .colours {

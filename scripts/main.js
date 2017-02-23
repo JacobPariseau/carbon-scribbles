@@ -15,12 +15,27 @@ window.$ = function(selector) {
 
   const drawLayer = $('#draw-layer');
 	const container = $('#canvas-container');
+	const clearButton = $('#clear-button');
+	const colourButtons = $('#palette');
   const context = drawLayer.getContext("2d");
   let oldPoint;
   let stoppedPainting;
 	let painting = false;
   let points = [];
-  let selectedColour = '#252525';
+
+	const colours = {
+		red: '#e53935',
+		yellow: '#ffb300',
+		green: '#43a047',
+		cyan: '#1e88e5',
+		blue: '#3949ab',
+		magenta: '#8e24aa',
+		black: '#212121',
+		white: '#fafafa'
+	};
+
+	let selectedColour = colours.black;
+	const weightedPeriod = 20;
 
   function paint(line, newEh) {
     clearInterval(stoppedPainting);
@@ -31,7 +46,6 @@ window.$ = function(selector) {
       points.push(line);
     }
 
-    const weightedPeriod = 30;
     let point = {};
     let delta = {
       x: 0,
@@ -89,22 +103,7 @@ window.$ = function(selector) {
 
     let velocity =  Math.cbrt(Math.pow(delta.x, 2) + Math.pow(delta.y, 2));
 
-		context.lineJoin = 'round';
-		context.lineWidth = velocity + 1;
-		context.strokeStyle = line.color;
-		context.beginPath();
-
-		//Average last ten points
-
-		if(point.from && point.from.x) {
-			context.moveTo(point.from.x, point.from.y);
-		}else{
-			context.moveTo(point.to.x-1, point.to.y);
-		}
-
-		context.lineTo(point.to.x, point.to.y);
-		context.closePath();
-		context.stroke();
+		blit(point, velocity);
 
 		if(points.length > 5) {
 			stoppedPainting = setInterval(function () {
@@ -144,43 +143,44 @@ window.$ = function(selector) {
 			//Remove the last point from the list so we're only smoothing recents
 			points = points.splice(1);
 
-			context.lineJoin = 'round';
-			context.lineWidth = velocity + 1;
-			context.strokeStyle = point.color;
-			context.beginPath();
-			if(point.from && point.from.x) {
-				context.moveTo(point.from.x, point.from.y);
-			} else {
-				context.moveTo(point.to.x-1, point.to.y);
-			}
-			context.lineTo(point.to.x, point.to.y);
-			context.closePath();
-			context.stroke();
+			blit(point, velocity);
 		} else {
 			clearInterval(stoppedPainting);
 		}
 	}
 
-	function drawPaint(e) {
-			painting = true;
-			const x = e.pageX || e.targetTouches[0].pageX;
-			const y = e.pageY || e.targetTouches[0].pageY;
-			const newPoint = getPoint(x, y);
-			const line = { from: null, to: newPoint, color: selectedColour };
-
-			paint(line, true);
-			oldPoint = newPoint;
+	function blit(point, velocity) {
+		context.lineJoin = 'round';
+		context.lineWidth = velocity + 1;
+		context.strokeStyle = selectedColour;
+		context.beginPath();
+		if(point.from && point.from.x) {
+			context.moveTo(point.from.x, point.from.y);
+		} else {
+			context.moveTo(point.to.x-1, point.to.y);
+		}
+		context.lineTo(point.to.x, point.to.y);
+		context.closePath();
+		context.stroke();
 	}
-
-	function movePaint(e) {
-		if( !painting) return;
+	function layPaint(e, newEh) {
+		if(newEh) {
+			painting = true;
+		}
+		else if(painting === false) {
+			return;
+		}
 
 		const x = e.pageX || e.targetTouches[0].pageX;
 		const y = e.pageY || e.targetTouches[0].pageY;
 		const newPoint = getPoint(x, y);
-		const line = { from: oldPoint, to: newPoint, color: selectedColour };
+		const line = {
+		  from: newEh ? null : oldPoint,
+			to: newPoint,
+			color: selectedColour
+		};
 
-		paint(line);
+		paint(line, newEh);
 		oldPoint = newPoint;
 	}
 
@@ -192,17 +192,27 @@ window.$ = function(selector) {
 		return { x: (x - container.offsetLeft) / drawLayer.offsetWidth * drawLayer.width, y: (y - container.offsetTop) / drawLayer.offsetHeight * drawLayer.height};
 	}
 
+	function clearCanvas(e) {
+		context.clearRect(0, 0, drawLayer.width, drawLayer.height);
+	}
+
+	function changeColour(e) {
+		selectedColour = colours[e.target.className];
+	}
 	// Disable text selection on the canvas
 	drawLayer.addEventListener('mousedown', function () {return false;}, true);
 
-	drawLayer.addEventListener('mousedown', drawPaint, true);
-	drawLayer.addEventListener('touchstart', drawPaint, true);
+	drawLayer.addEventListener('mousedown', function (e) { layPaint(e, true);}, true);
+	drawLayer.addEventListener('touchstart', function (e) { layPaint(e, true);}, true);
 
-	drawLayer.addEventListener('mousemove', movePaint, true);
-	drawLayer.addEventListener('touchmove', movePaint, true);
+	drawLayer.addEventListener('mousemove', layPaint, true);
+	drawLayer.addEventListener('touchmove', layPaint, true);
 
 	drawLayer.addEventListener('mouseout', stopPaint, true);
 	drawLayer.addEventListener('mouseup', stopPaint, true);
 	drawLayer.addEventListener('touchend', stopPaint, true);
 	drawLayer.addEventListener('touchcancel', stopPaint, true);
+
+	clearButton.addEventListener('click', clearCanvas, true);
+	colourButtons.addEventListener('click', changeColour, true);
 })();
