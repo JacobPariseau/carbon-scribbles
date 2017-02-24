@@ -25,9 +25,16 @@ main {
 canvas {
   max-height: 100%;
   max-width: 100%;
+  cursor: crosshair;
 }
 .fixed {
   position: fixed;
+}
+
+.hide {
+  opacity: 0 !important;
+  pointer-actions: none !important;
+  user-select: none !important;
 }
 
 #palette {
@@ -43,6 +50,17 @@ canvas {
 #share-button {
   right: 0;
   bottom: 0;
+}
+
+#share-panel {
+  right: 0;
+  bottom: 3rem;
+  opacity: 1;
+  transition: opacity 0.4s;
+
+  .socials {
+    list-style: none;
+  }
 }
 
 .colours {

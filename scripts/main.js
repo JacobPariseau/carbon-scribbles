@@ -15,8 +15,6 @@ window.$ = function(selector) {
 
   const drawLayer = $('#draw-layer');
 	const container = $('#canvas-container');
-	const clearButton = $('#clear-button');
-	const colourButtons = $('#palette');
   const context = drawLayer.getContext("2d");
   let oldPoint;
   let stoppedPainting;
@@ -163,6 +161,7 @@ window.$ = function(selector) {
 		context.closePath();
 		context.stroke();
 	}
+	
 	function layPaint(e, newEh) {
 		if(newEh) {
 			painting = true;
@@ -192,13 +191,6 @@ window.$ = function(selector) {
 		return { x: (x - container.offsetLeft) / drawLayer.offsetWidth * drawLayer.width, y: (y - container.offsetTop) / drawLayer.offsetHeight * drawLayer.height};
 	}
 
-	function clearCanvas(e) {
-		context.clearRect(0, 0, drawLayer.width, drawLayer.height);
-	}
-
-	function changeColour(e) {
-		selectedColour = colours[e.target.className];
-	}
 	// Disable text selection on the canvas
 	drawLayer.addEventListener('mousedown', function () {return false;}, true);
 
@@ -213,6 +205,34 @@ window.$ = function(selector) {
 	drawLayer.addEventListener('touchend', stopPaint, true);
 	drawLayer.addEventListener('touchcancel', stopPaint, true);
 
+  /** Palette */
+  const colourButtons = $('#palette');
+
+  function changeColour(e) {
+    selectedColour = colours[e.target.className];
+  }
+  colourButtons.addEventListener('click', changeColour, true);
+
+  /** Clear Canvas */
+  const clearButton = $('#clear-button');
+
+  function clearCanvas(e) {
+    context.clearRect(0, 0, drawLayer.width, drawLayer.height);
+  }
 	clearButton.addEventListener('click', clearCanvas, true);
-	colourButtons.addEventListener('click', changeColour, true);
+
+  /** Share Functionality */
+  const shareButton = $('#share-button');
+	const sharePanel = $('#share-panel');
+	let shareEh = false;
+  function toggleShare(e) {
+    shareEh = !shareEh;
+
+		if(shareEh) {
+			sharePanel.className = "fixed";
+		} else {
+			sharePanel.className = "fixed hide";
+		}
+  }
+  shareButton.addEventListener('click', toggleShare, true);
 })();
