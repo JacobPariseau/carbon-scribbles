@@ -16,16 +16,25 @@ body {
 main {
   background: @canvas;
   width: 800px;
+  height: 800px;
   max-width: 90%;
   max-height: 90%;
   margin: auto;
+  position: relative;
   .BoxShadowHelper(2);
 }
 
 canvas {
-  max-height: 100%;
-  max-width: 100%;
+  position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+  height: 100%;
+  width: 100%;
   cursor: crosshair;
+  user-select: none;
+  overflow: hidden;
 }
 .fixed {
   position: fixed;
@@ -33,10 +42,12 @@ canvas {
 
 .hide {
   opacity: 0 !important;
-  pointer-actions: none !important;
+  pointer-events: none !important;
   user-select: none !important;
 }
-
+#overlay-layer {
+  pointer-events: none;
+}
 #palette {
   right: 0;
   top: 0;

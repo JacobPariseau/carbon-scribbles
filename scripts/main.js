@@ -14,12 +14,18 @@ window.$ = function(selector) {
   'use strict'
 
   const drawLayer = $('#draw-layer');
-	const container = $('#canvas-container');
   const context = drawLayer.getContext("2d");
+  const overlayLayer = $('#overlay-layer');
+  const overlayCtx = overlayLayer.getContext("2d");
+  const container = $('#canvas-container');
   let oldPoint;
   let stoppedPainting;
 	let painting = false;
   let points = [];
+  const mouse = {
+    x: 0,
+    y: 0
+  };
 
 	const colours = {
 		red: '#e53935',
@@ -33,7 +39,7 @@ window.$ = function(selector) {
 	};
 
 	let selectedColour = colours.black;
-	const weightedPeriod = 20;
+	const weightedPeriod = 30;
 
   function paint(line, newEh) {
     clearInterval(stoppedPainting);
@@ -61,12 +67,14 @@ window.$ = function(selector) {
 			for (let i = 0; i < weightedPeriod; i++) {
 					point.to.x += points[i].to.x * (weightedPeriod - i);
 					point.to.y += points[i].to.y * (weightedPeriod - i);
+          delta.x += Math.abs(points[i].to.x - points[i+1].to.x) * (weightedPeriod - i);
+          delta.y += Math.abs(points[i].to.y - points[i+1].to.y) * (weightedPeriod - i);
 			}
 			//Divide the sum to get the average
 			point.to.x /= (( weightedPeriod * ( weightedPeriod + 1 )) / 2 );
 			point.to.y /= (( weightedPeriod * ( weightedPeriod + 1 )) / 2 );
-			delta.x = Math.abs(point.to.x - points[0].to.x);
-			delta.y = Math.abs(point.to.y - points[0].to.y);
+			delta.x /= (( weightedPeriod * ( weightedPeriod + 1 )) / 2 );
+			delta.y /= (( weightedPeriod * ( weightedPeriod + 1 )) / 2 );
 
 			//Set the next source to the current destination
 			points[1].from = point.to;
@@ -78,35 +86,39 @@ window.$ = function(selector) {
 				from: {x:0, y:0},
 				to: {x: 0,y: 0}
 			};
-
-			for (let i = 0; i < points.length; i++) {
+      const bufferSize = points.length - 1;
+			for (let i = 0; i < bufferSize; i++) {
 				//If the point has a source, average it. Otherwise average the destination
 				if(points[i].from) {
-					point.from.y += points[i].from.y * (points.length - i);
-					point.from.x += points[i].from.x * (points.length - i);
+					point.from.y += points[i].from.y * (bufferSize - i);
+					point.from.x += points[i].from.x * (bufferSize - i);
 				} else {
-					point.from.y += points[i].to.y * (points.length - i);
-					point.from.x += points[i].to.x * (points.length - i);
+					point.from.y += points[i].to.y * (bufferSize - i);
+					point.from.x += points[i].to.x * (bufferSize - i);
 				}
-					point.to.x += points[i].to.x * (points.length - i);
-					point.to.y += points[i].to.y * (points.length - i);
+					point.to.x += points[i].to.x * (bufferSize - i);
+					point.to.y += points[i].to.y * (bufferSize - i);
+
+
+        delta.x += Math.abs(points[i].to.x - points[i+1].to.x) * (bufferSize - i);
+        delta.y += Math.abs(points[i].to.y - points[i+1].to.y) * (bufferSize - i);
 			}
-			point.from.x /= (( points.length * ( points.length + 1 )) / 2 );
-			point.from.y /= (( points.length * ( points.length + 1 )) / 2 );
-			point.to.x /= (( points.length * ( points.length + 1 )) / 2 );
-			point.to.y /= (( points.length * ( points.length + 1 )) / 2 );
-			delta.x = Math.abs(point.to.x - points[0].to.x);
-			delta.y = Math.abs(point.to.y - points[0].to.y);
+			point.from.x /= (( bufferSize * ( bufferSize + 1 )) / 2 );
+			point.from.y /= (( bufferSize * ( bufferSize + 1 )) / 2 );
+			point.to.x /= (( bufferSize * ( bufferSize + 1 )) / 2 );
+			point.to.y /= (( bufferSize * ( bufferSize + 1 )) / 2 );
+			delta.x /= (( bufferSize * ( bufferSize + 1 )) / 2 );
+			delta.y /= (( bufferSize * ( bufferSize + 1 )) / 2 );
     }
 
-    let velocity =  Math.cbrt(Math.pow(delta.x, 2) + Math.pow(delta.y, 2));
+    let velocity =  Math.max(Math.cbrt(Math.pow(delta.x, 2) + Math.pow(delta.y, 2)) * 4, 5);
 
 		blit(point, velocity);
 
 		if(points.length > 5) {
 			stoppedPainting = setInterval(function () {
 				catchUp();
-			}, 16);
+			}, 20);
 		}
   }
 
@@ -125,17 +137,21 @@ window.$ = function(selector) {
 			};
 
 			//Sum the recent points, weighting the closest, highest.
-			for (let i = 0; i < points.length; i++) {
-					point.to.x += points[i].to.x * (points.length - i);
-					point.to.y += points[i].to.y * (points.length - i);
+      const bufferSize = points.length - 1;
+			for (let i = 0; i < bufferSize; i++) {
+					point.to.x += points[i].to.x * (bufferSize - i);
+					point.to.y += points[i].to.y * (bufferSize - i);
+
+          delta.x += Math.abs(points[i].to.x - points[i+1].to.x) * (bufferSize - i);
+          delta.y += Math.abs(points[i].to.y - points[i+1].to.y) * (bufferSize - i);
 			}
 
 			//Divide the sum to get the average
-			point.to.x /= (( points.length * ( points.length + 1 )) / 2 );
-			point.to.y /= (( points.length * ( points.length + 1 )) / 2 );
-			delta.x = Math.abs(point.to.x - points[0].to.x);
-			delta.y = Math.abs(point.to.y - points[0].to.y);
-			let velocity =  Math.cbrt(Math.pow(delta.x, 2) + Math.pow(delta.y, 2));
+			point.to.x /= (( bufferSize * ( bufferSize + 1 )) / 2 );
+			point.to.y /= (( bufferSize * ( bufferSize + 1 )) / 2 );
+			delta.x /= (( bufferSize * ( bufferSize + 1 )) / 2 );
+			delta.y /= (( bufferSize * ( bufferSize + 1 )) / 2 );
+			let velocity =  Math.max(Math.cbrt(Math.pow(delta.x, 2) + Math.pow(delta.y, 2)) * 4, 5);
 			//Set the next source to the current destination
 			points[1].from = point.to;
 			//Remove the last point from the list so we're only smoothing recents
@@ -160,8 +176,21 @@ window.$ = function(selector) {
 		context.lineTo(point.to.x, point.to.y);
 		context.closePath();
 		context.stroke();
+
+    overlayCtx.clearRect(0, 0, overlayLayer.width, overlayLayer.height);
+    if(mouse.x && mouse.y) {
+      const x = (mouse.x - container.offsetLeft) * overlayLayer.width / overlayLayer.clientWidth;
+      const y = (mouse.y - container.offsetTop) * overlayLayer.height / overlayLayer.clientHeight;
+      overlayCtx.lineWidth = 3;
+      overlayCtx.strokeStyle = '#333333';
+      overlayCtx.beginPath();
+      overlayCtx.moveTo(point.to.x, point.to.y);
+      overlayCtx.lineTo(x, y);
+      overlayCtx.closePath();
+      overlayCtx.stroke();
+    }
 	}
-	
+
 	function layPaint(e, newEh) {
 		if(newEh) {
 			painting = true;
@@ -170,9 +199,9 @@ window.$ = function(selector) {
 			return;
 		}
 
-		const x = e.pageX || e.targetTouches[0].pageX;
-		const y = e.pageY || e.targetTouches[0].pageY;
-		const newPoint = getPoint(x, y);
+		mouse.x = e.pageX || e.targetTouches[0].pageX;
+		mouse.y = e.pageY || e.targetTouches[0].pageY;
+		const newPoint = getPoint(mouse.x, mouse.y);
 		const line = {
 		  from: newEh ? null : oldPoint,
 			to: newPoint,
@@ -185,6 +214,10 @@ window.$ = function(selector) {
 
 	function stopPaint(e) {
 		painting = false;
+    overlayCtx.clearRect(0, 0, overlayLayer.width, overlayLayer.height);
+
+    mouse.x = 0;
+    mouse.y = 0;
 	}
 
 	function getPoint(x, y) {
@@ -200,7 +233,7 @@ window.$ = function(selector) {
 	drawLayer.addEventListener('mousemove', layPaint, true);
 	drawLayer.addEventListener('touchmove', layPaint, true);
 
-	drawLayer.addEventListener('mouseout', stopPaint, true);
+  drawLayer.addEventListener('mouseout', stopPaint, true);
 	drawLayer.addEventListener('mouseup', stopPaint, true);
 	drawLayer.addEventListener('touchend', stopPaint, true);
 	drawLayer.addEventListener('touchcancel', stopPaint, true);
